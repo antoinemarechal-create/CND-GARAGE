@@ -77,3 +77,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:13px 10p
 .sync-button.online .dot{background:var(--green)}.sync-button.offline .dot{background:#ffb04e}
 .sync-button.error .dot{background:var(--red)}.sync-button.syncing .dot{background:var(--orange);animation:pulse 1s infinite}
 @keyframes pulse{50%{opacity:.35}}
+
+.diagnostic-box{margin-top:10px;padding:12px 14px;border:1px solid #4a5560;border-radius:12px;background:#10161a;color:#dce3e8;font-size:12px;line-height:1.45;white-space:pre-wrap;word-break:break-word}
+.diagnostic-box.ok{border-color:#2f6d48;background:#102018;color:#9ee4b8}
+.diagnostic-box.err{border-color:#6b3434;background:#221313;color:#ffb0b0}

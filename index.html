@@ -236,13 +236,15 @@
           <label>Email atelier<input id="syncEmail" type="email" placeholder="atelier@ecole.be"></label>
           <label>Mot de passe<input id="syncPassword" type="password" placeholder="••••••••"></label>
           <button class="primary" id="connectSyncBtn">Connecter / tester</button>
+          <button class="ghost" id="testApiBtn">Tester URL + clé seulement</button>
           <button class="ghost" id="syncNowBtn">Synchroniser maintenant</button>
           <small id="syncHelp" class="muted">Aucune connexion Supabase configurée.</small>
+          <div id="syncDiagnostic" class="diagnostic-box hidden"></div>
         </div>
       </div>
       <div class="panel">
         <h2>Application</h2>
-        <p><b>C.N.D. 4 Dinant Garage</b><br>Version 2.1 PWA hybride • aucun prix • hors connexion + synchronisation automatique multi-iPad.</p>
+        <p><b>C.N.D. 4 Dinant Garage</b><br>Version 2.2 Diagnostic • aucun prix • hors connexion + synchronisation automatique multi-iPad.</p>
         <button class="danger ghost" id="resetBtn">Effacer toutes les données locales</button>
       </div>
     </div>

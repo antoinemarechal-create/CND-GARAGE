@@ -1,0 +1,7 @@
+Version 2.2 Diagnostic
+
+Dans Paramètres > Synchronisation multi-iPad :
+- Tester URL + clé seulement : vérifie l'accès au projet Supabase.
+- Connecter / tester : affiche le vrai code HTTP et le message Supabase si la connexion échoue.
+
+Après envoi sur GitHub, vérifiez que Paramètres > Application affiche « Version 2.2 Diagnostic ».

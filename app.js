@@ -58,14 +58,42 @@ const Sync = {
   },
   async login(email,password){
     const url=(localStorage.getItem("sb_url")||"").replace(/\/$/,"");
-    const r=await fetch(url+"/auth/v1/token?grant_type=password",{
-      method:"POST",
-      headers:{"apikey":localStorage.getItem("sb_key")||"","Content-Type":"application/json"},
-      body:JSON.stringify({email,password})
-    });
-    const d=await r.json();
-    if(!r.ok) throw new Error(d.error_description||d.msg||"Connexion impossible");
+    let r;
+    try{
+      r=await fetch(url+"/auth/v1/token?grant_type=password",{
+        method:"POST",
+        headers:{"apikey":localStorage.getItem("sb_key")||"","Content-Type":"application/json"},
+        body:JSON.stringify({email,password})
+      });
+    }catch(e){
+      throw new Error("ERREUR RÉSEAU : impossible de joindre Supabase. Vérifiez l’URL et Internet. Détail : "+e.message);
+    }
+    const raw=await r.text();
+    let d={};
+    try{d=raw?JSON.parse(raw):{}}catch{d={raw}}
+    if(!r.ok){
+      const detail=d.error_description||d.msg||d.message||d.error||d.code||raw||("HTTP "+r.status);
+      throw new Error("SUPABASE AUTH — HTTP "+r.status+" : "+detail);
+    }
+    if(!d.access_token) throw new Error("SUPABASE AUTH : aucun access_token reçu.");
     localStorage.setItem("sb_session",JSON.stringify(d));
+    return d;
+  },
+  async testPublicApi(){
+    const url=(localStorage.getItem("sb_url")||"").replace(/\/$/,"");
+    const key=localStorage.getItem("sb_key")||"";
+    if(!/^https:\/\/.+\.supabase\.co$/i.test(url)) throw new Error("URL invalide : elle doit ressembler à https://xxxxx.supabase.co");
+    if(!key) throw new Error("Clé publique absente.");
+    let r;
+    try{
+      r=await fetch(url+"/rest/v1/clients?select=id&limit=1",{headers:{"apikey":key,"Authorization":"Bearer "+key}});
+    }catch(e){
+      throw new Error("ERREUR RÉSEAU : "+e.message);
+    }
+    const raw=await r.text();
+    if(r.status===401 || r.status===403) return "URL et clé reconnues. La base demande une authentification utilisateur (normal avec les règles RLS). HTTP "+r.status+".";
+    if(!r.ok) throw new Error("REST API — HTTP "+r.status+" : "+raw);
+    return "URL et clé publiques valides. API Supabase joignable.";
   },
   async refreshIfNeeded(){
     const s=this.session(); if(!s?.refresh_token)return;
@@ -355,17 +383,46 @@ async function renderSettings(){
   $("#supabaseAnonKey").value=localStorage.getItem("sb_key")||"";
   $("#syncEmail").value=localStorage.getItem("sb_email")||"";
   $("#syncHelp").textContent=Sync.session()?"Connecté. Synchronisation automatique active.":"Renseignez Supabase puis connectez l’atelier.";
+  const diag=$("#syncDiagnostic");
+  const showDiag=(ok,msg)=>{diag.classList.remove("hidden","ok","err");diag.classList.add(ok?"ok":"err");diag.textContent=msg;};
+
+  $("#testApiBtn").onclick=async()=>{
+    localStorage.setItem("sb_url",$("#supabaseUrl").value.trim().replace(/\/$/,""));
+    localStorage.setItem("sb_key",$("#supabaseAnonKey").value.trim());
+    try{
+      showDiag(true,"Test URL + clé en cours…");
+      showDiag(true,await Sync.testPublicApi());
+    }catch(e){showDiag(false,"❌ "+e.message);Sync.setStatus("error","Erreur API")}
+  };
+
   $("#connectSyncBtn").onclick=async()=>{
     try{
-      localStorage.setItem("sb_url",$("#supabaseUrl").value.trim().replace(/\/$/,""));
-      localStorage.setItem("sb_key",$("#supabaseAnonKey").value.trim());
-      localStorage.setItem("sb_email",$("#syncEmail").value.trim());
-      await Sync.login($("#syncEmail").value.trim(),$("#syncPassword").value);
+      const url=$("#supabaseUrl").value.trim().replace(/\/$/,"");
+      const key=$("#supabaseAnonKey").value.trim();
+      const email=$("#syncEmail").value.trim();
+      const password=$("#syncPassword").value;
+      localStorage.setItem("sb_url",url);
+      localStorage.setItem("sb_key",key);
+      localStorage.setItem("sb_email",email);
+      if(!url) throw new Error("URL Supabase manquante.");
+      if(!key) throw new Error("Clé publique manquante.");
+      if(!email) throw new Error("Email atelier manquant.");
+      if(!password) throw new Error("Mot de passe manquant.");
+      showDiag(true,"1/3 Vérification URL + clé…");
+      const api=await Sync.testPublicApi();
+      showDiag(true,api+"\n\n2/3 Authentification…");
+      await Sync.login(email,password);
+      showDiag(true,api+"\n\nAuthentification réussie.\n\n3/3 Synchronisation…");
       $("#syncPassword").value="";
       await Sync.run();
       $("#syncHelp").textContent="Connexion réussie. Synchronisation automatique active.";
+      showDiag(true,"✅ CONNEXION RÉUSSIE\n\nURL/clé : OK\nUtilisateur : OK\nSynchronisation : lancée");
       toast("Supabase connecté.");
-    }catch(e){$("#syncHelp").textContent="Erreur : "+e.message;Sync.setStatus("error","Erreur connexion")}
+    }catch(e){
+      $("#syncHelp").textContent="Échec de connexion.";
+      showDiag(false,"❌ DIAGNOSTIC\n\n"+e.message+"\n\nCopiez ce message pour me l’envoyer.");
+      Sync.setStatus("error","Erreur connexion");
+    }
   };
   $("#syncNowBtn").onclick=async()=>{await Sync.run();toast("Synchronisation lancée.");};
   $("#exportBtn").onclick=async()=>{
