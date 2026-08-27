@@ -30,6 +30,7 @@
         <button data-view="clients" class="nav-btn">👤 <span>Clients</span></button>
         <button data-view="vehicles" class="nav-btn">🚗 <span>Véhicules</span></button>
         <button data-view="history" class="nav-btn">↺ <span>Historique</span></button>
+        <button data-view="exports" class="nav-btn">⬇ <span>Exports PDF</span></button>
         <button data-view="staff" class="nav-btn">🧑‍🔧 <span>Techniciens / élèves</span></button>
         <button data-view="settings" class="nav-btn">⚙ <span>Paramètres / sauvegarde</span></button>
       </nav>
@@ -50,6 +51,15 @@
   </div>
 
   <div id="toast"></div>
+
+  <div id="crudModal" class="modal hidden">
+    <div class="modal-backdrop" data-close-modal></div>
+    <div class="modal-card">
+      <div class="panel-head"><h2 id="modalTitle">Modifier</h2><button type="button" class="ghost" data-close-modal>×</button></div>
+      <form id="crudForm" class="modal-form"></form>
+    </div>
+  </div>
+
 
   <template id="tpl-dashboard">
     <div class="hero">
@@ -80,14 +90,13 @@
     <div class="stepper" id="stepper"></div>
     <form id="interventionForm" class="panel form-panel">
       <input type="hidden" name="id">
-      <input type="hidden" name="status" value="open">
 
       <section class="step active" data-step="1">
         <div class="section-title"><span>01</span><div><h2>Réception</h2><p>Données d'entrée du véhicule</p></div></div>
         <div class="grid-2">
-          <label>Date d'entrée<input type="date" name="dateIn" required></label>
-          <label>Heure<input type="time" name="timeIn" required></label>
-          <label>Kilométrage à l'entrée<input type="number" min="0" name="kmIn" placeholder="125560" required></label>
+          <label>Date d'entrée<input type="date" name="dateIn"></label>
+          <label>Heure<input type="time" name="timeIn"></label>
+          <label>Kilométrage à l'entrée<input type="number" min="0" name="kmIn" placeholder="125560"></label>
           <label>Réceptionnaire<input name="receiver" placeholder="Nom de l'élève ou du professeur"></label>
         </div>
         <label>Observations à l'arrivée<textarea name="arrivalNotes" rows="4" placeholder="État général, témoins, remarques..."></textarea></label>
@@ -168,7 +177,7 @@
         <div id="finalChecks" class="check-grid"></div>
         <div class="grid-2">
           <label>Kilométrage à la sortie<input type="number" name="kmOut"></label>
-          <label>Contrôlé par<input name="controlledBy" placeholder="Professeur / encadrant"></label>
+          <label>Contrôlé par<select name="controlledBy" id="controlledBySelect"><option value="">— Non renseigné —</option></select></label>
         </div>
         <label>Observations finales<textarea name="finalNotes" rows="4"></textarea></label>
       </section>
@@ -179,11 +188,30 @@
           <label>Date de restitution<input type="date" name="dateOut"></label>
           <label>Heure<input type="time" name="timeOut"></label>
           <label>Nom du client / réceptionnaire<input name="customerReceiver"></label>
-          <label>Statut<select name="status"><option value="open">En atelier</option><option value="closed">Restitué / clôturé</option></select></label>
+          <label>Statut
+            <select name="status" id="statusSelect">
+              <option value="open">En atelier</option>
+              <option value="closed">Sorti de l’atelier / clôturé</option>
+            </select>
+          </label>
         </div>
+
+        <label class="out-switch">
+          <input type="checkbox" id="vehicleOutCheck">
+          <span><b>🚗 Véhicule sorti de l’atelier</b><small>Cette option clôture la fiche et retire le véhicule de « Véhicules en atelier ».</small></span>
+        </label>
+
         <div class="signature-box">
-          <label>Validation professeur / encadrant<textarea name="teacherSignature" rows="3" placeholder="Nom / initiales / remarques"></textarea></label>
-          <label>Réception par le client<textarea name="customerSignature" rows="3" placeholder="Nom / signature saisie"></textarea></label>
+          <div class="signature-card">
+            <div class="panel-head"><b>Signature professeur / encadrant</b><button type="button" class="ghost small-btn" data-clear-signature="teacher">Effacer</button></div>
+            <canvas id="teacherSignatureCanvas" class="signature-canvas"></canvas>
+            <input type="hidden" name="teacherSignature">
+          </div>
+          <div class="signature-card">
+            <div class="panel-head"><b>Signature client</b><button type="button" class="ghost small-btn" data-clear-signature="customer">Effacer</button></div>
+            <canvas id="customerSignatureCanvas" class="signature-canvas"></canvas>
+            <input type="hidden" name="customerSignature">
+          </div>
         </div>
       </section>
 
@@ -217,6 +245,28 @@
     </div>
   </template>
 
+
+  <template id="tpl-exports">
+    <div class="settings-grid">
+      <div class="panel">
+        <h2>Télécharger une fiche</h2>
+        <p>Sélectionnez une intervention puis téléchargez directement sa fiche PDF A4.</p>
+        <div class="stack">
+          <label>Intervention<select id="singlePdfSelect"></select></label>
+          <button class="primary" id="downloadSinglePdf">Télécharger la fiche PDF</button>
+        </div>
+      </div>
+      <div class="panel">
+        <h2>Export mensuel</h2>
+        <p>Crée un seul PDF contenant toutes les fiches du mois sélectionné, une fiche par page.</p>
+        <div class="stack">
+          <label>Mois<input type="month" id="monthPdfInput"></label>
+          <button class="primary" id="downloadMonthPdf">Télécharger le PDF du mois</button>
+        </div>
+      </div>
+    </div>
+  </template>
+
   <template id="tpl-settings">
     <div class="settings-grid">
       <div class="panel">
@@ -244,7 +294,7 @@
       </div>
       <div class="panel">
         <h2>Application</h2>
-        <p><b>C.N.D. 4 Dinant Garage</b><br>Version 2.2 Diagnostic • aucun prix • hors connexion + synchronisation automatique multi-iPad.</p>
+        <p><b>C.N.D. 4 Dinant Garage</b><br>Version 3.0 Atelier • aucun prix • hors connexion + synchronisation automatique multi-iPad.</p>
         <button class="danger ghost" id="resetBtn">Effacer toutes les données locales</button>
       </div>
     </div>

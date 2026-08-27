@@ -1,0 +1,24 @@
+C.N.D. 4 DINANT GARAGE — V3.0 ATELIER
+
+Corrections et nouveautés :
+- Les fiches peuvent être enregistrées même si tous les champs ne sont pas remplis.
+- Clients : ajout, modification et suppression directe.
+- Véhicules : ajout, modification et suppression directe.
+- Techniciens / élèves : ajout, modification et suppression.
+- Fiches d'intervention : modifier, supprimer, télécharger en PDF.
+- Export mensuel : un PDF multi-pages avec toutes les fiches du mois.
+- Contrôle final : « Contrôlé par » devient un menu déroulant alimenté par les membres dont le rôle contient Professeur, Enseignant ou Encadrant.
+- Restitution : signatures tactiles au doigt/stylet pour le professeur et le client.
+- Nouvelle case « Véhicule sorti de l'atelier » qui clôture la fiche et enlève le véhicule de la liste « En atelier ».
+- Correction du bug de statut qui empêchait certaines fiches de se clôturer.
+- Synchronisation Supabase conservée.
+
+MISE À JOUR
+1. Remplacer sur GitHub les fichiers par ceux de cette version.
+2. Commit changes.
+3. Attendre 1 à 2 minutes.
+4. Recharger Safari jusqu'à voir « Version 3.0 Atelier » dans Paramètres.
+5. Ne pas effacer les données Safari : la base IndexedDB est conservée.
+
+CONSEIL
+Avant une mise à jour importante, utiliser Paramètres > Exporter la sauvegarde.
