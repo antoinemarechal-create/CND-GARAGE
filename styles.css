@@ -72,3 +72,8 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:13px 10p
   .print-box p{margin:2px 0}.print-list{margin:0;padding-left:15px}.print-sign{display:grid;grid-template-columns:1fr 1fr;gap:6px}.print-sign>div{border:1px solid #bbb;min-height:50px;padding:6px}
 }
 @media screen{#printArea{display:none}}
+
+.sync-button{cursor:pointer;color:#dce3e8}.sync-button .dot{background:#88939b}
+.sync-button.online .dot{background:var(--green)}.sync-button.offline .dot{background:#ffb04e}
+.sync-button.error .dot{background:var(--red)}.sync-button.syncing .dot{background:var(--orange);animation:pulse 1s infinite}
+@keyframes pulse{50%{opacity:.35}}

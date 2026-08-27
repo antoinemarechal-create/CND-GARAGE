@@ -1,0 +1,28 @@
+C.N.D. 4 DINANT GARAGE — VERSION 2 MULTI-IPAD
+
+Cette version utilise :
+- IndexedDB sur chaque iPad : fonctionnement hors connexion.
+- Supabase : synchronisation entre les iPad.
+- GitHub Pages : hébergement de l'application.
+
+INSTALLATION
+1. Créez un projet Supabase gratuit.
+2. Ouvrez SQL Editor et exécutez SUPABASE_SETUP.sql.
+3. Dans Authentication, créez un utilisateur email + mot de passe pour l'atelier.
+4. Dans Project Settings > API, copiez Project URL et la clé anon/public.
+   Ne mettez JAMAIS la clé service_role dans l'application.
+5. Remplacez sur GitHub les anciens fichiers par ceux de cette version.
+6. Sur chaque iPad : Paramètres / sauvegarde > Synchronisation multi-iPad.
+7. Entrez URL, clé anon, email, mot de passe > Connecter / tester.
+
+FONCTIONNEMENT
+- Sans Wi-Fi : l'élève continue à travailler normalement.
+- Les modifications sont mises en attente sur l'iPad.
+- Au retour d'Internet : elles sont envoyées automatiquement.
+- L'application vérifie également la synchronisation environ toutes les 60 secondes.
+- Si deux iPad modifient le même enregistrement, la version modifiée le plus récemment gagne.
+
+SÉCURITÉ
+- Les politiques RLS refusent l'accès aux personnes non authentifiées.
+- Désactivez les inscriptions publiques et créez uniquement les comptes autorisés.
+- Utilisez la clé anon/public côté application, jamais service_role.

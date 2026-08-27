@@ -11,10 +11,10 @@ const DB = {
   db:null,
   open(){
     return new Promise((resolve,reject)=>{
-      const r=indexedDB.open("cnd4-garage",1);
+      const r=indexedDB.open("cnd4-garage",2);
       r.onupgradeneeded=e=>{
         const db=e.target.result;
-        ["clients","vehicles","interventions","staff"].forEach(s=>{
+        ["clients","vehicles","interventions","staff","sync_queue","sync_meta"].forEach(s=>{
           if(!db.objectStoreNames.contains(s)) db.createObjectStore(s,{keyPath:"id"});
         });
       };
@@ -40,6 +40,113 @@ function fmtDate(v){if(!v)return"—";const [y,m,d]=v.split("-");return `${d}/${
 function fullClient(c){return [c?.firstName,c?.lastName].filter(Boolean).join(" ")||"Client sans nom"}
 function fullVehicle(v){return [v?.make,v?.model,v?.plate&&`• ${v.plate}`].filter(Boolean).join(" ")||"Véhicule"}
 function esc(s=""){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[m]))}
+
+
+const Sync = {
+  stores:["clients","vehicles","staff","interventions"],
+  configured(){ return !!(localStorage.getItem("sb_url") && localStorage.getItem("sb_key")); },
+  session(){ try{return JSON.parse(localStorage.getItem("sb_session")||"null")}catch{return null} },
+  setStatus(kind,text){
+    const b=document.getElementById("syncStatus"), t=document.getElementById("syncStatusText");
+    if(!b||!t)return;
+    b.classList.remove("online","offline","error","syncing");
+    if(kind)b.classList.add(kind); t.textContent=text;
+  },
+  headers(){
+    const s=this.session(), key=localStorage.getItem("sb_key")||"";
+    return {"apikey":key,"Authorization":"Bearer "+(s?.access_token||""),"Content-Type":"application/json"};
+  },
+  async login(email,password){
+    const url=(localStorage.getItem("sb_url")||"").replace(/\/$/,"");
+    const r=await fetch(url+"/auth/v1/token?grant_type=password",{
+      method:"POST",
+      headers:{"apikey":localStorage.getItem("sb_key")||"","Content-Type":"application/json"},
+      body:JSON.stringify({email,password})
+    });
+    const d=await r.json();
+    if(!r.ok) throw new Error(d.error_description||d.msg||"Connexion impossible");
+    localStorage.setItem("sb_session",JSON.stringify(d));
+  },
+  async refreshIfNeeded(){
+    const s=this.session(); if(!s?.refresh_token)return;
+    if(Date.now() < ((s.expires_at||0)*1000)-60000) return;
+    const url=(localStorage.getItem("sb_url")||"").replace(/\/$/,"");
+    const r=await fetch(url+"/auth/v1/token?grant_type=refresh_token",{
+      method:"POST",
+      headers:{"apikey":localStorage.getItem("sb_key")||"","Content-Type":"application/json"},
+      body:JSON.stringify({refresh_token:s.refresh_token})
+    });
+    const d=await r.json(); if(r.ok)localStorage.setItem("sb_session",JSON.stringify(d));
+  },
+  async queue(store,record,op="upsert"){
+    if(!this.stores.includes(store))return;
+    await DB.put("sync_queue",{id:uid(),store,record_id:record.id,op,record,createdAt:new Date().toISOString()});
+    this.setStatus("offline",navigator.onLine?"À synchroniser":"Hors connexion");
+    if(navigator.onLine) this.run().catch(()=>{});
+  },
+  async remoteUpsert(store,record){
+    const url=(localStorage.getItem("sb_url")||"").replace(/\/$/,"");
+    const body={id:record.id,payload:record,updated_at:record.updatedAt||new Date().toISOString()};
+    const r=await fetch(`${url}/rest/v1/${store}?on_conflict=id`,{
+      method:"POST",
+      headers:{...this.headers(),"Prefer":"resolution=merge-duplicates,return=minimal"},
+      body:JSON.stringify(body)
+    });
+    if(!r.ok) throw new Error(await r.text());
+  },
+  async remoteDelete(store,id){
+    const url=(localStorage.getItem("sb_url")||"").replace(/\/$/,"");
+    const r=await fetch(`${url}/rest/v1/${store}?id=eq.${encodeURIComponent(id)}`,{method:"DELETE",headers:this.headers()});
+    if(!r.ok) throw new Error(await r.text());
+  },
+  async push(){
+    const q=(await DB.all("sync_queue")).sort((a,b)=>a.createdAt.localeCompare(b.createdAt));
+    for(const item of q){
+      if(item.op==="delete") await this.remoteDelete(item.store,item.record_id);
+      else await this.remoteUpsert(item.store,item.record);
+      await DB.del("sync_queue",item.id);
+    }
+  },
+  async pullStore(store){
+    const url=(localStorage.getItem("sb_url")||"").replace(/\/$/,"");
+    const meta=await DB.get("sync_meta","last_sync");
+    const since=meta?.value||"1970-01-01T00:00:00.000Z";
+    const r=await fetch(`${url}/rest/v1/${store}?select=id,payload,updated_at&updated_at=gt.${encodeURIComponent(since)}&order=updated_at.asc`,{headers:this.headers()});
+    if(!r.ok) throw new Error(await r.text());
+    const rows=await r.json();
+    for(const row of rows){
+      if(!row.payload)continue;
+      const local=await DB.get(store,row.id);
+      const remoteUpdated=row.payload.updatedAt||row.updated_at||"";
+      const localUpdated=local?.updatedAt||"";
+      if(!local || remoteUpdated>=localUpdated) await DB.put(store,row.payload);
+    }
+  },
+  async run(){
+    if(!this.configured()){this.setStatus("offline","Local seulement");return}
+    if(!navigator.onLine){this.setStatus("offline","Hors connexion");return}
+    if(!this.session()){this.setStatus("error","Connexion requise");return}
+    try{
+      this.setStatus("syncing","Synchronisation…");
+      await this.refreshIfNeeded();
+      await this.push();
+      for(const s of this.stores) await this.pullStore(s);
+      await DB.put("sync_meta",{id:"last_sync",value:new Date().toISOString()});
+      this.setStatus("online","Synchronisé");
+    }catch(e){console.error(e);this.setStatus("error","Erreur sync");}
+  }
+};
+
+async function syncedPut(store,val){
+  await DB.put(store,val);
+  await Sync.queue(store,val,"upsert");
+  return val;
+}
+async function syncedDel(store,id){
+  const old=await DB.get(store,id);
+  await DB.del(store,id);
+  if(old) await Sync.queue(store,old,"delete");
+}
 
 let state={view:"dashboard",step:1,editingId:null};
 
@@ -173,12 +280,12 @@ async function saveIntervention(finish){
     clientId=uid();
   }
   const client={id:clientId,lastName:f.clientLastName.value.trim(),firstName:f.clientFirstName.value.trim(),phone:f.clientPhone.value.trim(),email:f.clientEmail.value.trim(),address:f.clientAddress.value.trim(),zip:f.clientZip.value.trim(),city:f.clientCity.value.trim(),updatedAt:new Date().toISOString()};
-  await DB.put("clients",client);
+  await syncedPut("clients",client);
 
   let vehicleId=f.vehicleId.value;
   if(!vehicleId){vehicleId=uid()}
   const vehicle={id:vehicleId,clientId,make:f.vehicleMake.value.trim(),model:f.vehicleModel.value.trim(),version:f.vehicleVersion.value.trim(),fuel:f.vehicleFuel.value,year:f.vehicleYear.value,plate:f.vehiclePlate.value.trim().toUpperCase(),vin:f.vehicleVin.value.trim().toUpperCase(),lastKm:+f.kmOut.value||+f.kmIn.value||0,updatedAt:new Date().toISOString()};
-  await DB.put("vehicles",vehicle);
+  await syncedPut("vehicles",vehicle);
 
   const id=f.id.value||uid();
   const item={id,clientId,vehicleId,dateIn:f.dateIn.value,timeIn:f.timeIn.value,kmIn:+f.kmIn.value||0,receiver:f.receiver.value.trim(),arrivalNotes:f.arrivalNotes.value.trim(),
@@ -188,7 +295,7 @@ async function saveIntervention(finish){
     dateOut:f.dateOut.value,timeOut:f.timeOut.value,customerReceiver:f.customerReceiver.value.trim(),status:f.status.value,teacherSignature:f.teacherSignature.value.trim(),customerSignature:f.customerSignature.value.trim(),
     updatedAt:new Date().toISOString(),createdAt:f.dataset.createdAt||new Date().toISOString()
   };
-  await DB.put("interventions",item);state.editingId=id;f.id.value=id;toast("Intervention enregistrée.");
+  await syncedPut("interventions",item);state.editingId=id;f.id.value=id;toast("Intervention enregistrée.");
   if(finish){navTo(item.status==="closed"?"history":"workshop")}
 }
 
@@ -239,11 +346,28 @@ async function renderInterventionList(openOnly){
 
 async function renderStaff(){
   $("#view").appendChild(clone("tpl-staff"));const wrap=$("#staffList");
-  async function draw(){const all=await DB.all("staff");wrap.innerHTML=all.length?"":'<div class="empty">Aucun technicien / élève enregistré.</div>';all.sort((a,b)=>a.name.localeCompare(b.name)).forEach(s=>{const d=document.createElement("div");d.className="staff-card";d.innerHTML=`<div class="who"><strong>${esc(s.name)}</strong><span>${esc(s.role||"Élève")}</span></div><button class="ghost">Supprimer</button>`;d.querySelector("button").onclick=async()=>{if(confirm(`Supprimer ${s.name} ?`)){await DB.del("staff",s.id);draw()}};wrap.appendChild(d)})}
-  $("#addStaffBtn").onclick=async()=>{const name=prompt("Nom du technicien / élève :");if(!name)return;const role=prompt("Rôle (ex. Élève 5P, Professeur) :","Élève")||"Élève";await DB.put("staff",{id:uid(),name:name.trim(),role:role.trim()});draw();toast("Personne ajoutée.")};draw();
+  async function draw(){const all=await DB.all("staff");wrap.innerHTML=all.length?"":'<div class="empty">Aucun technicien / élève enregistré.</div>';all.sort((a,b)=>a.name.localeCompare(b.name)).forEach(s=>{const d=document.createElement("div");d.className="staff-card";d.innerHTML=`<div class="who"><strong>${esc(s.name)}</strong><span>${esc(s.role||"Élève")}</span></div><button class="ghost">Supprimer</button>`;d.querySelector("button").onclick=async()=>{if(confirm(`Supprimer ${s.name} ?`)){await syncedDel("staff",s.id);draw()}};wrap.appendChild(d)})}
+  $("#addStaffBtn").onclick=async()=>{const name=prompt("Nom du technicien / élève :");if(!name)return;const role=prompt("Rôle (ex. Élève 5P, Professeur) :","Élève")||"Élève";await syncedPut("staff",{id:uid(),name:name.trim(),role:role.trim()});draw();toast("Personne ajoutée.")};draw();
 }
 async function renderSettings(){
   $("#view").appendChild(clone("tpl-settings"));
+  $("#supabaseUrl").value=localStorage.getItem("sb_url")||"";
+  $("#supabaseAnonKey").value=localStorage.getItem("sb_key")||"";
+  $("#syncEmail").value=localStorage.getItem("sb_email")||"";
+  $("#syncHelp").textContent=Sync.session()?"Connecté. Synchronisation automatique active.":"Renseignez Supabase puis connectez l’atelier.";
+  $("#connectSyncBtn").onclick=async()=>{
+    try{
+      localStorage.setItem("sb_url",$("#supabaseUrl").value.trim().replace(/\/$/,""));
+      localStorage.setItem("sb_key",$("#supabaseAnonKey").value.trim());
+      localStorage.setItem("sb_email",$("#syncEmail").value.trim());
+      await Sync.login($("#syncEmail").value.trim(),$("#syncPassword").value);
+      $("#syncPassword").value="";
+      await Sync.run();
+      $("#syncHelp").textContent="Connexion réussie. Synchronisation automatique active.";
+      toast("Supabase connecté.");
+    }catch(e){$("#syncHelp").textContent="Erreur : "+e.message;Sync.setStatus("error","Erreur connexion")}
+  };
+  $("#syncNowBtn").onclick=async()=>{await Sync.run();toast("Synchronisation lancée.");};
   $("#exportBtn").onclick=async()=>{
     const data={version:1,exportedAt:new Date().toISOString(),clients:await DB.all("clients"),vehicles:await DB.all("vehicles"),interventions:await DB.all("interventions"),staff:await DB.all("staff")};
     const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`cnd4-garage-sauvegarde-${nowDate()}.json`;a.click();URL.revokeObjectURL(a.href);
@@ -278,5 +402,10 @@ async function printIntervention(id){
 (async()=>{
   await DB.open();
   if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{});
-  render();
+  window.addEventListener("online",()=>Sync.run());
+  window.addEventListener("offline",()=>Sync.setStatus("offline","Hors connexion"));
+  const sb=document.getElementById("syncStatus"); if(sb) sb.addEventListener("click",()=>navTo("settings"));
+  await render();
+  Sync.run().catch(()=>{});
+  setInterval(()=>Sync.run().catch(()=>{}),60000);
 })();

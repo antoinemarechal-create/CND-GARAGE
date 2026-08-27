@@ -1,5 +1,5 @@
 
-const CACHE="cnd4-garage-v1";
+const CACHE="cnd4-garage-v2-sync";
 const ASSETS=["./","./index.html","./styles.css","./app.js","./manifest.webmanifest","./logo-cnd4-garage.png"];
 self.addEventListener("install",e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS))));
 self.addEventListener("activate",e=>e.waitUntil(self.clients.claim()));

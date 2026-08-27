@@ -43,7 +43,7 @@
           <div class="eyebrow">C.N.D. 4 DINANT GARAGE</div>
           <h1 id="pageTitle">Tableau de bord</h1>
         </div>
-        <div class="status-pill"><span class="dot"></span> Données locales</div>
+        <button id="syncStatus" class="status-pill sync-button" type="button"><span class="dot"></span><span id="syncStatusText">Local</span></button>
       </header>
       <section id="view"></section>
     </main>
@@ -228,8 +228,21 @@
         </div>
       </div>
       <div class="panel">
+        <h2>Synchronisation multi-iPad</h2>
+        <p>La base locale reste disponible hors connexion. Dès qu’Internet revient, l’application envoie les changements vers Supabase et récupère ceux des autres iPad.</p>
+        <div class="stack">
+          <label>URL Supabase<input id="supabaseUrl" placeholder="https://xxxxx.supabase.co"></label>
+          <label>Clé publique anon<input id="supabaseAnonKey" placeholder="eyJ..."></label>
+          <label>Email atelier<input id="syncEmail" type="email" placeholder="atelier@ecole.be"></label>
+          <label>Mot de passe<input id="syncPassword" type="password" placeholder="••••••••"></label>
+          <button class="primary" id="connectSyncBtn">Connecter / tester</button>
+          <button class="ghost" id="syncNowBtn">Synchroniser maintenant</button>
+          <small id="syncHelp" class="muted">Aucune connexion Supabase configurée.</small>
+        </div>
+      </div>
+      <div class="panel">
         <h2>Application</h2>
-        <p><b>C.N.D. 4 Dinant Garage</b><br>Version locale PWA • aucun prix • fonctionnement hors connexion après installation.</p>
+        <p><b>C.N.D. 4 Dinant Garage</b><br>Version PWA hybride • aucun prix • hors connexion + synchronisation automatique multi-iPad.</p>
         <button class="danger ghost" id="resetBtn">Effacer toutes les données locales</button>
       </div>
     </div>
