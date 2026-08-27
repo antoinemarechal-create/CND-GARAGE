@@ -401,7 +401,9 @@ async function printIntervention(id){
 
 (async()=>{
   await DB.open();
-  if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{});
+  if("serviceWorker" in navigator){
+    navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).then(reg=>reg.update()).catch(()=>{});
+  }
   window.addEventListener("online",()=>Sync.run());
   window.addEventListener("offline",()=>Sync.setStatus("offline","Hors connexion"));
   const sb=document.getElementById("syncStatus"); if(sb) sb.addEventListener("click",()=>navTo("settings"));
