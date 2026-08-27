@@ -1,0 +1,28 @@
+C.N.D. 4 DINANT GARAGE - V3.1 ATELIER
+
+Modifications :
+- Rubrique 10 Restitution :
+  * date de sortie en menu déroulant (hier, aujourd'hui, demain et dates proches) ;
+  * heure de sortie préremplie avec l'heure actuelle et modifiable ;
+  * « Nom du client / réceptionnaire » remplacé par « Chef d'atelier ».
+- Signatures :
+  * correction de la zone de signature sur iPad ;
+  * prise en charge du doigt et de l'Apple Pencil ;
+  * bouton Effacer conservé ;
+  * signature sauvegardée dans la fiche.
+- PDF :
+  * nouvelle mise en page A4 plus professionnelle ;
+  * en-tête sombre et orange inspiré de l'application ;
+  * logo intégré ;
+  * rubriques organisées en cartes ;
+  * accents français correctement encodés ;
+  * correction des libellés et fautes ;
+  * signatures intégrées au PDF lorsqu'elles sont présentes ;
+  * export mensuel conservé, une fiche par page.
+
+MISE À JOUR :
+1. Remplacer les fichiers sur GitHub par ceux de ce ZIP.
+2. Commit changes.
+3. Attendre 1 à 2 minutes.
+4. Recharger Safari.
+5. Vérifier dans Paramètres : « Version 3.1 Atelier ».

@@ -185,9 +185,14 @@
       <section class="step" data-step="10">
         <div class="section-title"><span>10</span><div><h2>Restitution</h2><p>Clôture de l'intervention</p></div></div>
         <div class="grid-2">
-          <label>Date de restitution<input type="date" name="dateOut"></label>
-          <label>Heure<input type="time" name="timeOut"></label>
-          <label>Nom du client / réceptionnaire<input name="customerReceiver"></label>
+          <label>Date de sortie
+            <select id="dateOutSelect">
+              <option value="">— Non renseignée —</option>
+            </select>
+            <input type="hidden" name="dateOut">
+          </label>
+          <label>Heure de sortie<input type="time" name="timeOut" step="60"></label>
+          <label>Chef d'atelier<input name="customerReceiver" placeholder="Nom du chef d'atelier"></label>
           <label>Statut
             <select name="status" id="statusSelect">
               <option value="open">En atelier</option>
@@ -203,12 +208,12 @@
 
         <div class="signature-box">
           <div class="signature-card">
-            <div class="panel-head"><b>Signature professeur / encadrant</b><button type="button" class="ghost small-btn" data-clear-signature="teacher">Effacer</button></div>
+            <div class="panel-head"><div><b>Signature professeur / encadrant</b><small class="signature-help">Signer directement avec le doigt ou l’Apple Pencil.</small></div><button type="button" class="ghost small-btn" data-clear-signature="teacher">Effacer</button></div>
             <canvas id="teacherSignatureCanvas" class="signature-canvas"></canvas>
             <input type="hidden" name="teacherSignature">
           </div>
           <div class="signature-card">
-            <div class="panel-head"><b>Signature client</b><button type="button" class="ghost small-btn" data-clear-signature="customer">Effacer</button></div>
+            <div class="panel-head"><div><b>Signature client</b><small class="signature-help">Signer directement avec le doigt ou l’Apple Pencil.</small></div><button type="button" class="ghost small-btn" data-clear-signature="customer">Effacer</button></div>
             <canvas id="customerSignatureCanvas" class="signature-canvas"></canvas>
             <input type="hidden" name="customerSignature">
           </div>
@@ -258,7 +263,7 @@
       </div>
       <div class="panel">
         <h2>Export mensuel</h2>
-        <p>Crée un seul PDF contenant toutes les fiches du mois sélectionné, une fiche par page.</p>
+        <p>Crée un dossier PDF propre et harmonisé contenant toutes les fiches du mois sélectionné, une fiche par page.</p>
         <div class="stack">
           <label>Mois<input type="month" id="monthPdfInput"></label>
           <button class="primary" id="downloadMonthPdf">Télécharger le PDF du mois</button>
@@ -294,7 +299,7 @@
       </div>
       <div class="panel">
         <h2>Application</h2>
-        <p><b>C.N.D. 4 Dinant Garage</b><br>Version 3.0 Atelier • aucun prix • hors connexion + synchronisation automatique multi-iPad.</p>
+        <p><b>C.N.D. 4 Dinant Garage</b><br>Version 3.1 Atelier • aucun prix • hors connexion + synchronisation automatique multi-iPad.</p>
         <button class="danger ghost" id="resetBtn">Effacer toutes les données locales</button>
       </div>
     </div>

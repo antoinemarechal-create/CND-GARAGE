@@ -97,3 +97,8 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:13px 10p
 .modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:8px}
 .warn-text{color:#ffab72}
 @media(max-width:650px){.modal-card{max-height:82vh}.signature-box{grid-template-columns:1fr}}
+
+.signature-help{display:block;color:var(--muted);font-size:11px;margin-top:3px}
+.signature-canvas{cursor:crosshair;border:2px dashed #bbc2c8!important;box-shadow:inset 0 0 0 1px #fff}
+.signature-canvas.signing{border-color:var(--orange)!important}
+#dateOutSelect{min-height:44px}
