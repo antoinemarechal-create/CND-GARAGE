@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b0d0f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="CND4 Garage">
+  <title>C.N.D. 4 Dinant Garage</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="logo-cnd4-garage.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="appShell">
+    <aside class="sidebar">
+      <div class="brand">
+        <img src="logo-cnd4-garage.png" alt="Logo C.N.D. 4 Dinant Garage">
+        <div>
+          <strong>C.N.D. 4 DINANT</strong>
+          <span>ATELIER SCOLAIRE</span>
+        </div>
+      </div>
+
+      <nav id="nav">
+        <button data-view="dashboard" class="nav-btn active">⌂ <span>Accueil</span></button>
+        <button data-view="newIntervention" class="nav-btn">＋ <span>Nouvelle réception</span></button>
+        <button data-view="workshop" class="nav-btn">🔧 <span>Véhicules en atelier</span></button>
+        <button data-view="clients" class="nav-btn">👤 <span>Clients</span></button>
+        <button data-view="vehicles" class="nav-btn">🚗 <span>Véhicules</span></button>
+        <button data-view="history" class="nav-btn">↺ <span>Historique</span></button>
+        <button data-view="staff" class="nav-btn">🧑‍🔧 <span>Techniciens / élèves</span></button>
+        <button data-view="settings" class="nav-btn">⚙ <span>Paramètres / sauvegarde</span></button>
+      </nav>
+
+      <div class="sidebar-foot">Sans prix • Fonctionne hors connexion</div>
+    </aside>
+
+    <main>
+      <header class="topbar">
+        <div>
+          <div class="eyebrow">C.N.D. 4 DINANT GARAGE</div>
+          <h1 id="pageTitle">Tableau de bord</h1>
+        </div>
+        <div class="status-pill"><span class="dot"></span> Données locales</div>
+      </header>
+      <section id="view"></section>
+    </main>
+  </div>
+
+  <div id="toast"></div>
+
+  <template id="tpl-dashboard">
+    <div class="hero">
+      <div class="hero-overlay">
+        <img src="logo-cnd4-garage.png" alt="">
+        <div>
+          <span>ATELIER SCOLAIRE</span>
+          <h2>Suivi des véhicules<br>du début à la fin.</h2>
+          <p>Réception, travaux, pièces, liquides, couples, contrôles, signatures et historique.</p>
+        </div>
+      </div>
+    </div>
+    <div class="metric-grid">
+      <button class="metric action-card" data-action="newIntervention"><b>＋</b><span>Nouvelle réception</span><small>Créer un ordre d'intervention</small></button>
+      <button class="metric action-card" data-action="workshop"><b>🔧</b><span>En atelier</span><small id="metricWorkshop">0 véhicule</small></button>
+      <button class="metric action-card" data-action="clients"><b>👤</b><span>Clients</span><small id="metricClients">0 client</small></button>
+      <button class="metric action-card" data-action="vehicles"><b>🚗</b><span>Véhicules</span><small id="metricVehicles">0 véhicule</small></button>
+      <button class="metric action-card" data-action="history"><b>↺</b><span>Historique</span><small id="metricHistory">0 intervention</small></button>
+      <button class="metric action-card" data-action="staff"><b>🧑‍🔧</b><span>Techniciens / élèves</span><small id="metricStaff">0 personne</small></button>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h3>Dernières interventions</h3><button class="ghost" data-action="history">Tout voir</button></div>
+      <div id="recentInterventions" class="list"></div>
+    </div>
+  </template>
+
+  <template id="tpl-new-intervention">
+    <div class="stepper" id="stepper"></div>
+    <form id="interventionForm" class="panel form-panel">
+      <input type="hidden" name="id">
+      <input type="hidden" name="status" value="open">
+
+      <section class="step active" data-step="1">
+        <div class="section-title"><span>01</span><div><h2>Réception</h2><p>Données d'entrée du véhicule</p></div></div>
+        <div class="grid-2">
+          <label>Date d'entrée<input type="date" name="dateIn" required></label>
+          <label>Heure<input type="time" name="timeIn" required></label>
+          <label>Kilométrage à l'entrée<input type="number" min="0" name="kmIn" placeholder="125560" required></label>
+          <label>Réceptionnaire<input name="receiver" placeholder="Nom de l'élève ou du professeur"></label>
+        </div>
+        <label>Observations à l'arrivée<textarea name="arrivalNotes" rows="4" placeholder="État général, témoins, remarques..."></textarea></label>
+      </section>
+
+      <section class="step" data-step="2">
+        <div class="section-title"><span>02</span><div><h2>Client</h2><p>Rechercher un client existant ou en créer un</p></div></div>
+        <label>Client existant
+          <select name="clientId" id="clientSelect"><option value="">— Nouveau client —</option></select>
+        </label>
+        <div class="grid-2">
+          <label>Nom<input name="clientLastName"></label>
+          <label>Prénom<input name="clientFirstName"></label>
+          <label>Téléphone<input type="tel" name="clientPhone"></label>
+          <label>Email<input type="email" name="clientEmail"></label>
+          <label class="span-2">Adresse<input name="clientAddress"></label>
+          <label>Code postal<input name="clientZip"></label>
+          <label>Ville<input name="clientCity"></label>
+        </div>
+      </section>
+
+      <section class="step" data-step="3">
+        <div class="section-title"><span>03</span><div><h2>Véhicule</h2><p>Associer le véhicule au client</p></div></div>
+        <label>Véhicule existant
+          <select name="vehicleId" id="vehicleSelect"><option value="">— Nouveau véhicule —</option></select>
+        </label>
+        <div class="grid-2">
+          <label>Marque<input name="vehicleMake" placeholder="Peugeot"></label>
+          <label>Modèle<input name="vehicleModel" placeholder="308"></label>
+          <label>Version<input name="vehicleVersion" placeholder="1.6 BlueHDi"></label>
+          <label>Énergie<select name="vehicleFuel"><option></option><option>Essence</option><option>Diesel</option><option>Hybride</option><option>Électrique</option><option>GPL</option><option>Autre</option></select></label>
+          <label>Année<input type="number" name="vehicleYear" min="1900" max="2100"></label>
+          <label>Immatriculation<input name="vehiclePlate" style="text-transform:uppercase"></label>
+          <label class="span-2">N° de châssis / VIN<input name="vehicleVin" maxlength="17" style="text-transform:uppercase"></label>
+        </div>
+      </section>
+
+      <section class="step" data-step="4">
+        <div class="section-title"><span>04</span><div><h2>Travaux demandés</h2><p>Demande client et opérations prévues</p></div></div>
+        <div id="requestedWorks" class="check-grid"></div>
+        <label>Commentaire client<textarea name="customerRequest" rows="4" placeholder="Ex. bruit au freinage à l'avant depuis quelques jours..."></textarea></label>
+      </section>
+
+      <section class="step" data-step="5">
+        <div class="section-title"><span>05</span><div><h2>Travaux effectués</h2><p>Cocher uniquement les opérations réellement réalisées</p></div></div>
+        <div id="completedWorks" class="check-grid"></div>
+        <label>Observations atelier<textarea name="workshopNotes" rows="4"></textarea></label>
+      </section>
+
+      <section class="step" data-step="6">
+        <div class="section-title"><span>06</span><div><h2>Pièces & liquides</h2><p>Sans prix</p></div></div>
+        <div class="split">
+          <div>
+            <div class="panel-head"><h3>Liquides ajoutés</h3><button type="button" class="ghost" id="addFluid">＋ Ajouter</button></div>
+            <div id="fluidsRows" class="dynamic-rows"></div>
+          </div>
+          <div>
+            <div class="panel-head"><h3>Pièces placées / remplacées</h3><button type="button" class="ghost" id="addPart">＋ Ajouter</button></div>
+            <div id="partsRows" class="dynamic-rows"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="step" data-step="7">
+        <div class="section-title"><span>07</span><div><h2>Couples de serrage</h2><p>Tracer les valeurs réellement utilisées</p></div></div>
+        <div class="panel-head"><h3>Valeurs</h3><button type="button" class="ghost" id="addTorque">＋ Ajouter un couple</button></div>
+        <div id="torquesRows" class="dynamic-rows"></div>
+      </section>
+
+      <section class="step" data-step="8">
+        <div class="section-title"><span>08</span><div><h2>Techniciens / élèves</h2><p>Qui a travaillé sur ce véhicule ?</p></div></div>
+        <div id="staffChecks" class="check-grid"></div>
+        <label>Remarque sur l'équipe<textarea name="staffNotes" rows="3" placeholder="Ex. Martin : vidange et filtres; Sophie : freinage..."></textarea></label>
+      </section>
+
+      <section class="step" data-step="9">
+        <div class="section-title"><span>09</span><div><h2>Contrôle final</h2><p>Validation avant restitution</p></div></div>
+        <div id="finalChecks" class="check-grid"></div>
+        <div class="grid-2">
+          <label>Kilométrage à la sortie<input type="number" name="kmOut"></label>
+          <label>Contrôlé par<input name="controlledBy" placeholder="Professeur / encadrant"></label>
+        </div>
+        <label>Observations finales<textarea name="finalNotes" rows="4"></textarea></label>
+      </section>
+
+      <section class="step" data-step="10">
+        <div class="section-title"><span>10</span><div><h2>Restitution</h2><p>Clôture de l'intervention</p></div></div>
+        <div class="grid-2">
+          <label>Date de restitution<input type="date" name="dateOut"></label>
+          <label>Heure<input type="time" name="timeOut"></label>
+          <label>Nom du client / réceptionnaire<input name="customerReceiver"></label>
+          <label>Statut<select name="status"><option value="open">En atelier</option><option value="closed">Restitué / clôturé</option></select></label>
+        </div>
+        <div class="signature-box">
+          <label>Validation professeur / encadrant<textarea name="teacherSignature" rows="3" placeholder="Nom / initiales / remarques"></textarea></label>
+          <label>Réception par le client<textarea name="customerSignature" rows="3" placeholder="Nom / signature saisie"></textarea></label>
+        </div>
+      </section>
+
+      <div class="form-actions">
+        <button type="button" id="prevStep" class="ghost">← Étape précédente</button>
+        <div class="grow"></div>
+        <button type="button" id="saveDraft" class="ghost">Enregistrer</button>
+        <button type="button" id="nextStep" class="primary">Étape suivante →</button>
+        <button type="submit" id="finishBtn" class="primary hidden">Enregistrer et terminer</button>
+      </div>
+    </form>
+  </template>
+
+  <template id="tpl-list-page">
+    <div class="panel">
+      <div class="toolbar">
+        <input id="searchInput" class="search" placeholder="Rechercher...">
+        <button class="primary" id="primaryAction"></button>
+      </div>
+      <div id="tableWrap"></div>
+    </div>
+  </template>
+
+  <template id="tpl-staff">
+    <div class="panel">
+      <div class="panel-head">
+        <div><h2>Techniciens / élèves</h2><p>Ces personnes pourront être attribuées à une intervention.</p></div>
+        <button class="primary" id="addStaffBtn">＋ Ajouter</button>
+      </div>
+      <div id="staffList" class="cards-list"></div>
+    </div>
+  </template>
+
+  <template id="tpl-settings">
+    <div class="settings-grid">
+      <div class="panel">
+        <h2>Sauvegarde</h2>
+        <p>Les données sont conservées localement sur cet iPad. Exportez régulièrement une copie de sécurité.</p>
+        <div class="stack">
+          <button class="primary" id="exportBtn">Exporter la sauvegarde (.json)</button>
+          <label class="file-button">Importer une sauvegarde<input type="file" id="importInput" accept="application/json"></label>
+        </div>
+      </div>
+      <div class="panel">
+        <h2>Application</h2>
+        <p><b>C.N.D. 4 Dinant Garage</b><br>Version locale PWA • aucun prix • fonctionnement hors connexion après installation.</p>
+        <button class="danger ghost" id="resetBtn">Effacer toutes les données locales</button>
+      </div>
+    </div>
+  </template>
+
+  <div id="printArea"></div>
+  <script src="app.js"></script>
+</body>
+</html>

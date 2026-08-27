@@ -1,0 +1,17 @@
+{
+  "name": "C.N.D. 4 Dinant Garage",
+  "short_name": "CND4 Garage",
+  "description": "Application d'atelier scolaire pour le suivi des clients, véhicules et interventions.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#090b0d",
+  "theme_color": "#0b0d0f",
+  "icons": [
+    {
+      "src": "logo-cnd4-garage.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
